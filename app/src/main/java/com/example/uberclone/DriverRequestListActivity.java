@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
@@ -34,7 +35,7 @@ import com.shashank.sony.fancytoastlib.FancyToast;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DriverRequestListActivity extends AppCompatActivity implements View.OnClickListener {
+public class DriverRequestListActivity extends AppCompatActivity implements View.OnClickListener, AdapterView.OnItemClickListener {
 
     private Button btnGetRequests;
     private LocationManager locationManager;
@@ -44,6 +45,8 @@ public class DriverRequestListActivity extends AppCompatActivity implements View
     private ArrayList<String> nearByRequest;
     private ArrayAdapter adapter;
 
+    private ArrayList<Double> passengerLatitudes;
+    private ArrayList<Double> passengerLongtitudes;
 
 
     @Override
@@ -57,50 +60,95 @@ public class DriverRequestListActivity extends AppCompatActivity implements View
         listView = findViewById(R.id.listView);
 
         nearByRequest = new ArrayList<>();
-        adapter = new ArrayAdapter(this,android.R.layout.simple_list_item_1, nearByRequest);
+        passengerLatitudes = new ArrayList<>();
+        passengerLongtitudes = new ArrayList<>();
+
+        adapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, nearByRequest);
 
         listView.setAdapter(adapter);
+        listView.setOnItemClickListener(this);
+
 
         nearByRequest.clear();
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
-        if(ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
-
-            try {
+        locationListener = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,0,0,locationListener);
-
-            }catch (Exception e){
 
 
             }
 
-        }else{
+            @Override
+            public void onStatusChanged(String provider, int status, Bundle extras) {
 
+            }
+
+            @Override
+            public void onProviderEnabled(String provider) {
+
+            }
+
+            @Override
+            public void onProviderDisabled(String provider) {
+
+            }
+        };
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                Build.VERSION.SDK_INT<23)
+        {
+
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
 
         }
+
+
 
     }
 
     private void updateRequestsListView(Location driverLocation) {
-        if(driverLocation!=null){
+        if (driverLocation != null) {
 
-            final ParseGeoPoint driverCurrentLocation = new ParseGeoPoint(driverLocation.getLatitude(),driverLocation.getLongitude());
+            final ParseGeoPoint driverCurrentLocation = new ParseGeoPoint(driverLocation.getLatitude(), driverLocation.getLongitude());
 
             ParseQuery<ParseObject> requestCarQuery = ParseQuery.getQuery("RequestCar");
-            requestCarQuery.whereNear("passengerLocation",driverCurrentLocation);
+            requestCarQuery.whereNear("passengerLocation", driverCurrentLocation);
             requestCarQuery.findInBackground(new FindCallback<ParseObject>() {
                 @Override
                 public void done(List<ParseObject> objects, ParseException e) {
 
-                    if(objects.size()>0&& e == null){
-                        nearByRequest.clear();
-                        for(ParseObject nearRequest: objects){
+                    if (objects.size() > 0 && e == null) {
 
-                            double distanceInMiles = driverCurrentLocation.distanceInMilesTo((ParseGeoPoint)nearRequest.get("passengerLocation"));
+                        if (nearByRequest.size() > 0) {
 
-                            float roundedDistance = Math.round(distanceInMiles*100000)/10000f;
-                            nearByRequest.add("There are "+ roundedDistance+ " miles to "+ nearRequest.getString("username"));
+                            nearByRequest.clear();
 
+                        }
+
+                        if (passengerLatitudes.size() > 0) {
+
+                            passengerLatitudes.clear();
+
+                        }
+
+                        if (passengerLongtitudes.size() > 0) {
+
+                            passengerLongtitudes.clear();
+
+                        }
+
+                        for (ParseObject nearRequest : objects) {
+
+                            ParseGeoPoint passengerPoint = (ParseGeoPoint) nearRequest.get("passengerLocation");
+                            double distanceInMiles = driverCurrentLocation.distanceInMilesTo(passengerPoint);
+
+                            float roundedDistance = Math.round(distanceInMiles * 100000) / 10000f;
+                            nearByRequest.add("There are " + roundedDistance + " miles to " + nearRequest.getString("username"));
+
+                            passengerLatitudes.add(passengerPoint.getLatitude());
+                            passengerLongtitudes.add(passengerPoint.getLongitude());
 
 
                         }
@@ -113,36 +161,11 @@ public class DriverRequestListActivity extends AppCompatActivity implements View
             });
 
 
-
         }
 
 
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 1000) {
-
-            if (grantResults.length > 0 && grantResults[0] == Activity.RESULT_OK) {
-
-                if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    // TODO: Consider calling
-                    //    Activity#requestPermissions
-                    // here to request the missing permissions, and then overriding
-                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                    //                                          int[] grantResults)
-                    // to handle the case where the user grants the permission. See the documentation
-                    // for Activity#requestPermissions for more details.
-                    return;
-                }
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
-                updateRequestsListView(locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER));
-            }
-
-        }
-    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -189,30 +212,29 @@ public class DriverRequestListActivity extends AppCompatActivity implements View
         if (v.getId() == R.id.btnGetRequests) {
 
 
-            locationListener = new LocationListener() {
-                @Override
-                public void onLocationChanged(Location location) {
-                    updateRequestsListView(location);
+          if (Build.VERSION.SDK_INT >= 23) {
 
+                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+                    updateRequestsListView(locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER));
+
+                } else {
+
+                    requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1000);
                 }
 
-                @Override
-                public void onStatusChanged(String provider, int status, Bundle extras) {
+            }
+        }
+    }
 
-                }
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 1000) {
 
-                @Override
-                public void onProviderEnabled(String provider) {
-
-                }
-
-                @Override
-                public void onProviderDisabled(String provider) {
-
-                }
-            };
-
-            if (Build.VERSION.SDK_INT < 23) {
+            if (grantResults.length > 0 && grantResults[0] == Activity.RESULT_OK) {
 
                 if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     // TODO: Consider calling
@@ -225,21 +247,20 @@ public class DriverRequestListActivity extends AppCompatActivity implements View
                     return;
                 }
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
-
-
-
-            } else if (Build.VERSION.SDK_INT >= 23) {
-
-                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-
-                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
-
-                } else {
-
-                    requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1000);
-                }
-
+                updateRequestsListView(locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER));
             }
+
         }
     }
+
+
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+
+        Intent intent = new Intent(this, ViewLocationMapActivity.class);
+        showToast("Transition", FancyToast.INFO);
+
+
+    }
+
 }
