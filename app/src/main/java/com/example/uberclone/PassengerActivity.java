@@ -65,24 +65,28 @@ public class PassengerActivity extends FragmentActivity implements OnMapReadyCal
                 startActivity(new Intent(PassengerActivity.this,MainActivity.class));
             }
         });
+        if(ParseUser.getCurrentUser()!=null){
 
-        ParseQuery<ParseObject> parseQuery = ParseQuery.getQuery("RequestCar");
-        parseQuery.whereEqualTo("username",ParseUser.getCurrentUser().getUsername());
+            ParseQuery<ParseObject> parseQuery = ParseQuery.getQuery("RequestCar");
+            parseQuery.whereEqualTo("username",ParseUser.getCurrentUser().getUsername());
 
-        parseQuery.findInBackground(new FindCallback<ParseObject>() {
-            @Override
-            public void done(List<ParseObject> objects, ParseException e) {
-                if(objects!=null&&objects.size()>0&&e == null){
+            parseQuery.findInBackground(new FindCallback<ParseObject>() {
+                @Override
+                public void done(List<ParseObject> objects, ParseException e) {
+                    if(objects!=null&&objects.size()>0&&e == null){
 
-                    btnRequestCar.setText("Cancel the car");
+                        btnRequestCar.setText("Cancel the car");
 
-                }else{
+                    }else{
 
-                    btnRequestCar.setText("Request a car");
+                        btnRequestCar.setText("Request a car");
 
+                    }
                 }
-            }
-        });
+            });
+
+        }
+
 
     }
 

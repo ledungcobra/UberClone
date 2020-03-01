@@ -14,10 +14,10 @@
         android:text="View Passenger Request" />
 
     <Button
-        android:id="@+id/btnUpdateTheList"
+        android:id="@+id/btnGetRequests"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="UPDATE THE LIST" />
+        android:text="GET NEAR BY" />
 
     <ListView
         android:id="@+id/listView"

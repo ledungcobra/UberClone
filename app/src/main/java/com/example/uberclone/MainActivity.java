@@ -56,6 +56,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if(ParseUser.getCurrentUser()!=null){
 
            transitionToPassengerActivity();
+           transitionToDriverListActivity();
 
         }
 
@@ -140,6 +141,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                     @Override
                                     public void done(ParseException e) {
                                         transitionToPassengerActivity();
+                                        transitionToDriverListActivity();
                                     }
                                 });
 
@@ -204,9 +206,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void transitionToPassengerActivity(){
 
         if(ParseUser.getCurrentUser()!=null){
+
             if(ParseUser.getCurrentUser().get("as").equals("Passenger"));
             startActivity(new Intent(this,PassengerActivity.class));
-
 
         }
 
