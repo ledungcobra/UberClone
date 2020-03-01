@@ -47,6 +47,8 @@ public class DriverRequestListActivity extends AppCompatActivity implements View
 
     private ArrayList<Double> passengerLatitudes;
     private ArrayList<Double> passengerLongtitudes;
+    private ArrayList<String> requestCarUsername;
+
 
 
     @Override
@@ -62,6 +64,7 @@ public class DriverRequestListActivity extends AppCompatActivity implements View
         nearByRequest = new ArrayList<>();
         passengerLatitudes = new ArrayList<>();
         passengerLongtitudes = new ArrayList<>();
+        requestCarUsername = new ArrayList<>();
 
         adapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, nearByRequest);
 
@@ -75,7 +78,7 @@ public class DriverRequestListActivity extends AppCompatActivity implements View
         locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,0,0,locationListener);
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
 
 
             }
@@ -97,13 +100,11 @@ public class DriverRequestListActivity extends AppCompatActivity implements View
         };
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-                Build.VERSION.SDK_INT<23)
-        {
+                Build.VERSION.SDK_INT < 23) {
 
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
 
         }
-
 
 
     }
@@ -149,6 +150,8 @@ public class DriverRequestListActivity extends AppCompatActivity implements View
 
                             passengerLatitudes.add(passengerPoint.getLatitude());
                             passengerLongtitudes.add(passengerPoint.getLongitude());
+                            requestCarUsername.add(nearRequest.getString("username"));
+
 
 
                         }
@@ -212,7 +215,7 @@ public class DriverRequestListActivity extends AppCompatActivity implements View
         if (v.getId() == R.id.btnGetRequests) {
 
 
-          if (Build.VERSION.SDK_INT >= 23) {
+            if (Build.VERSION.SDK_INT >= 23) {
 
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 
@@ -253,12 +256,30 @@ public class DriverRequestListActivity extends AppCompatActivity implements View
         }
     }
 
-
+    @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 
         Intent intent = new Intent(this, ViewLocationMapActivity.class);
-        showToast("Transition", FancyToast.INFO);
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},1000);
+
+            return;
+        }
+        Location cdLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        if(cdLocation!=null){
+
+            intent.putExtra("dLatitude",cdLocation.getLatitude());
+            intent.putExtra("dLongtitude",cdLocation.getLongitude());
+            intent.putExtra("pLatitude",passengerLatitudes.get(position));
+            intent.putExtra("pLongtitude",passengerLongtitudes.get(position));
+            intent.putExtra("rUsername",requestCarUsername.get(position));
+
+            startActivity(intent);
+
+        }
+
+
 
 
     }
